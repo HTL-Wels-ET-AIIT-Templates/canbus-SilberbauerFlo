@@ -21,10 +21,13 @@
 /* Private define ------------------------------------------------------------*/
 
 // ToDo: korrekte Prescaler-Einstellung
-#define   CAN1_CLOCK_PRESCALER    1024
+#define   CAN1_CLOCK_PRESCALER    16
 
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef     canHandle;
+
+static uint16_t txCnt = 0;
+static uint16_t rxCnt = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static void initGpio(void);
@@ -60,7 +63,7 @@ void canInit(void) {
 	LCD_SetPrintPosition(7,1);
 	printf("Recv-Cnt:");
 	LCD_SetPrintPosition(7,15);
-	printf("%5d", 0);
+	printf("%5d", rxCnt);
 	LCD_SetPrintPosition(9,1);
 	printf("Send-Data:");
 	LCD_SetPrintPosition(15,1);
@@ -80,20 +83,33 @@ void canInit(void) {
  */
 void canSendTask(void) {
 	// ToDo declare the required variables
-	static unsigned int sendCnt = 0;
-
-
+	CAN_TxHeaderTypeDef txHeader;
+	static uint8_t sendCnt = 0;
+	uint8_t txData[8];
 
 	// ToDo (2): get temperature value
 
-
+	txHeader.StdId = 0x1AB;
+	txHeader.ExtId = 0x00;
+	txHeader.RTR = CAN_RTR_DATA;
+	txHeader.IDE = CAN_ID_STD;
+	txHeader.DLC = 2;
+	txData[0] = 0xC3;
+	txData[1] = var;
 
 	// ToDo prepare send data
 
-
+	if (HAL_CAN_GetTxMailboxesFreeLevel(&canHandle) != 3 ) {
+		printErr();
+		return;
+	}
 
 	// ToDo send CAN frame
 
+	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) != HAL_OK) {
+		printErr();
+		return;
+	}
 
 
 	// ToDo display send counter and send data
@@ -108,22 +124,27 @@ void canSendTask(void) {
  * @return none
  */
 void canReceiveTask(void) {
-	static unsigned int recvCnt = 0;
-
-
+	CAN_RxHeaderTypeDef rxHeader;
+	static uint8_t recvCnt = 0;
+	uint8_t rxData[8];
 
 	// ToDo: check if CAN frame has been received
 
-
-
+	if (HAL_CAN_GetRxFifoFillLevel(&canHandle, CAN_RX_FIFO0) == 0) {
+		printErr();
+		return;
+	}
 
 	// ToDo: Get CAN frame from RX fifo
 
-
+	if (HAL_CAN_GetRxMessage(&canHandle, CAN_RX_FIFO0, &rxHeader, rxData) != HAL_OK) {
+		printErr();
+		return;
+	}
 
 	// ToDo: Process received CAN Frame (extract data)
 
-
+	rxCnt = rxData[1];
 
 	// ToDo display recv counter and recv data
 
@@ -256,4 +277,14 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 }
 
+
+
+void printErr() {
+
+	LCD_SetFont(&Font16);
+	LCD_SetColors(LCD_COLOR_RED, LCD_COLOR_BLACK);
+
+	LCD_SetPrintPosition(17,5);
+	printf("Error");
+}
 
