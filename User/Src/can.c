@@ -58,17 +58,12 @@ void canInit(void) {
 	LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
 	LCD_SetPrintPosition(5,1);
 	printf("Send-Cnt:");
-	LCD_SetPrintPosition(5,15);
-	printf("%5d", 0);
 	LCD_SetPrintPosition(7,1);
 	printf("Recv-Cnt:");
-	LCD_SetPrintPosition(7,15);
-	printf("%5d", rxCnt);
 	LCD_SetPrintPosition(9,1);
 	printf("Send-Data:");
 	LCD_SetPrintPosition(15,1);
 	printf("Recv-Data:");
-
 	LCD_SetPrintPosition(30,1);
 	printf("Bit-Timing-Register: 0x%lx", CAN1->BTR);
 
@@ -84,7 +79,7 @@ void canInit(void) {
 void canSendTask(void) {
 	// ToDo declare the required variables
 	CAN_TxHeaderTypeDef txHeader;
-	static uint8_t sendCnt = 0;
+	uint32_t txMailbox;
 	uint8_t txData[8];
 
 	// ToDo (2): get temperature value
@@ -93,9 +88,9 @@ void canSendTask(void) {
 	txHeader.ExtId = 0x00;
 	txHeader.RTR = CAN_RTR_DATA;
 	txHeader.IDE = CAN_ID_STD;
-	txHeader.DLC = 2;
+	txHeader.DLC = 2; //length in bytes
 	txData[0] = 0xC3;
-	txData[1] = var;
+	txData[1] = 0x69;
 
 	// ToDo prepare send data
 
@@ -114,7 +109,13 @@ void canSendTask(void) {
 
 	// ToDo display send counter and send data
 
+	LCD_SetPrintPosition(9,15);
+	printf("%i", txData[0]);
 
+	txCnt++;
+
+	LCD_SetPrintPosition(5,15);
+	printf("%5d", txCnt);
 
 }
 
@@ -131,7 +132,6 @@ void canReceiveTask(void) {
 	// ToDo: check if CAN frame has been received
 
 	if (HAL_CAN_GetRxFifoFillLevel(&canHandle, CAN_RX_FIFO0) == 0) {
-		printErr();
 		return;
 	}
 
@@ -144,12 +144,16 @@ void canReceiveTask(void) {
 
 	// ToDo: Process received CAN Frame (extract data)
 
-	rxCnt = rxData[1];
+
 
 	// ToDo display recv counter and recv data
 
+	rxCnt++;
+	LCD_SetPrintPosition(7,15);
+	printf("%5d", rxCnt);
 
-
+	LCD_SetPrintPosition(15,15);
+	printf("%5d", rxData[0]);
 }
 
 /**
@@ -193,7 +197,7 @@ static void initCanPeripheral(void) {
 	canHandle.Init.AutoRetransmission = ENABLE;
 	canHandle.Init.ReceiveFifoLocked = DISABLE;
 	canHandle.Init.TransmitFifoPriority = DISABLE;
-	canHandle.Init.Mode = CAN_MODE_NORMAL;
+	canHandle.Init.Mode = CAN_MODE_LOOPBACK; //keep enabled for testing
 	canHandle.Init.SyncJumpWidth = CAN_SJW_1TQ;
 
 	// CAN Baudrate

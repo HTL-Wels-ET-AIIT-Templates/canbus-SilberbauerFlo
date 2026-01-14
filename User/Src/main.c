@@ -82,6 +82,7 @@ int main(void)
 
 	canInit();
 
+	uint8_t prevState = 0;
 
 	/* Infinite loop */
 	while (1)
@@ -91,10 +92,14 @@ int main(void)
 
 		// ToDo: send data over CAN when user button has been pressed
 
-		canSendTask();
+		if(GetUserButtonPressed() && !prevState) {
+			canSendTask();
+			prevState = 1;
+		} else if(!GetUserButtonPressed() && prevState) {
+			prevState = 0;
+		}
 
 		// ToDo: check if data has been received
-
 		canReceiveTask();
 
 		// display timer
@@ -104,11 +109,6 @@ int main(void)
 		LCD_SetPrintPosition(0, 18);
 		printf("   Timer: %.1f", cnt/1000.0);
 
-		// test touch interface
-		int x, y;
-		if (GetTouchState(&x, &y)) {
-			LCD_FillCircle(x, y, 5);
-		}
 
 
 	}
